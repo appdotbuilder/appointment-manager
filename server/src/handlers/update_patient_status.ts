@@ -1,19 +1,28 @@
 
+import { db } from '../db';
+import { patientsTable } from '../db/schema';
 import { type UpdatePatientStatusInput, type Patient } from '../schema';
+import { eq } from 'drizzle-orm';
 
-export async function updatePatientStatus(input: UpdatePatientStatusInput): Promise<Patient> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is updating a patient's status (e.g., from 'waiting' to 'in_consultation').
-    // It should also update the updated_at timestamp.
-    // Note: Patients with 'cancelled' status should not be callable by doctors.
-    return Promise.resolve({
-        id: input.patient_id,
-        full_name: "Placeholder Name",
-        id_number: "000000000",
-        consultation_room: 1,
-        arrival_time: new Date(),
+export const updatePatientStatus = async (input: UpdatePatientStatusInput): Promise<Patient> => {
+  try {
+    // Update patient status and updated_at timestamp
+    const result = await db.update(patientsTable)
+      .set({
         status: input.status,
-        created_at: new Date(),
         updated_at: new Date()
-    } as Patient);
-}
+      })
+      .where(eq(patientsTable.id, input.patient_id))
+      .returning()
+      .execute();
+
+    if (result.length === 0) {
+      throw new Error(`Patient with ID ${input.patient_id} not found`);
+    }
+
+    return result[0];
+  } catch (error) {
+    console.error('Patient status update failed:', error);
+    throw error;
+  }
+};
